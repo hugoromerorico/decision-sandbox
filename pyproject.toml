@@ -1,9 +1,9 @@
 [project]
 name = "decision-sandbox"
 version = "0.1.0"
-description = "Add your description here"
+description = "A minimal FastAPI backend running on Cloudflare Python Workers."
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.14"
 dependencies = [
     "fastapi>=0.142.2",
 ]
@@ -12,9 +12,4 @@ dependencies = [
 dev = [
     "workers-py>=1.17.6",
     "workers-runtime-sdk>=1.9.2",
-]
-
-[tool.uv.workspace]
-members = [
-    "test",
 ]

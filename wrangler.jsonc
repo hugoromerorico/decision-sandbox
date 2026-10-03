@@ -1,7 +1,7 @@
 {
     "$schema": "node_modules/wrangler/config-schema.json",
     "name": "decision-sandbox",
-    "main": "main.py",
+    "main": "src/entry.py",
     "compatibility_date": "2026-10-03",
     "compatibility_flags": [
         "python_workers"

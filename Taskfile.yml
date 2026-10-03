@@ -1,6 +1,12 @@
 version: '3'
 
 tasks:
+  sync:
+    desc: Install local and Worker (Pyodide) dependencies
+    cmds:
+      - uv sync
+      - uv run pywrangler sync
+
   dev:
     desc: Start local development server
     cmd: uv run pywrangler dev
