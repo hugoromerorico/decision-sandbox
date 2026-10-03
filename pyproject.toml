@@ -1,7 +1,7 @@
 [project]
 name = "decision-sandbox"
 version = "0.1.0"
-description = "A minimal FastAPI backend running on Cloudflare Python Workers."
+description = "A free synthetic decision API for testing Jev-compatible integrations."
 readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
@@ -10,6 +10,13 @@ dependencies = [
 
 [dependency-groups]
 dev = [
+    "httpx2>=2.13.1",
+    "jsonschema>=4.26.0",
+    "pytest>=9.1.1",
     "workers-py>=1.17.6",
     "workers-runtime-sdk>=1.9.2",
 ]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

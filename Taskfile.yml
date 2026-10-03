@@ -7,6 +7,10 @@ tasks:
       - uv sync
       - uv run pywrangler sync
 
+  test:
+    desc: Run contract tests against the TypeSafe OpenAPI spec
+    cmd: uv run pytest
+
   dev:
     desc: Start local development server
     cmd: uv run pywrangler dev
