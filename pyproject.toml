@@ -1,0 +1,20 @@
+[project]
+name = "decision-sandbox"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.142.2",
+]
+
+[dependency-groups]
+dev = [
+    "workers-py>=1.17.6",
+    "workers-runtime-sdk>=1.9.2",
+]
+
+[tool.uv.workspace]
+members = [
+    "test",
+]

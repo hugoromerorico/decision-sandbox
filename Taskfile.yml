@@ -1,0 +1,10 @@
+version: '3'
+
+tasks:
+  dev:
+    desc: Start local development server
+    cmd: uv run pywrangler dev
+
+  deploy:
+    desc: Deploy to Cloudflare Workers
+    cmd: uv run pywrangler deploy
