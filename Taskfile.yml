@@ -1,5 +1,8 @@
 version: '3'
 
+vars:
+  DEV_PORT: 8787
+
 tasks:
   sync:
     desc: Install local and Worker (Pyodide) dependencies
@@ -13,7 +16,39 @@ tasks:
 
   dev:
     desc: Start local development server
-    cmd: uv run pywrangler dev
+    cmd: uv run pywrangler dev --port {{.DEV_PORT}}
+
+  bench:
+    desc: Benchmark local dev server and prod, to compare app vs network latency
+    cmds:
+      - task: bench:dev
+      - task: bench:prod
+
+  bench:dev:
+    desc: Benchmark the local dev server, starting one if none is running
+    vars:
+      URL: http://localhost:{{.DEV_PORT}}
+    cmd: |
+      if curl -sf {{.URL}}/health > /dev/null; then
+        uv run python bench/latency.py {{.URL}}
+        exit
+      fi
+      echo "Starting dev server on port {{.DEV_PORT}} (log: .wrangler/bench-dev.log)"
+      mkdir -p .wrangler
+      {{.TASK_EXE}} dev DEV_PORT={{.DEV_PORT}} > .wrangler/bench-dev.log 2>&1 &
+      for i in $(seq 90); do
+        curl -sf {{.URL}}/health > /dev/null && break
+        sleep 1
+      done
+      status=0
+      uv run python bench/latency.py {{.URL}} || status=$?
+      # Stopping wrangler shuts down the whole `task dev` chain; killing workerd alone leaves it orphaned.
+      pkill -TERM -f "wrangler-dist/cli.js dev --port {{.DEV_PORT}}"
+      exit $status
+
+  bench:prod:
+    desc: Benchmark the public instance (16 requests, under the rate limit)
+    cmd: uv run python bench/latency.py https://decision-sandbox.gutan.dev
 
   deploy:
     desc: Deploy to Cloudflare Workers

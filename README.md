@@ -9,12 +9,14 @@ Decision Sandbox is a free, open-source **synthetic decision API** for testing J
 
 Use random answers for demos, seeded answers for reproducible tests and scenarios to simulate failures.
 
+**Public instance:** [https://decision-sandbox.gutan.dev](https://decision-sandbox.gutan.dev)
+
 ## Quick start
 
-Change your base URL from `https://api.typesafe.ai` to the sandbox's URL. An API key is optional, and any key is accepted.
+Change your base URL from `https://api.typesafe.ai` to `https://decision-sandbox.gutan.dev`. An API key is optional, and any key is accepted.
 
 ```sh
-curl -s $SANDBOX_URL/v1/systemone \
+curl -s https://decision-sandbox.gutan.dev/v1/systemone \
   -H 'Content-Type: application/json' \
   -d '{
     "model": "jev-latest",
@@ -42,7 +44,7 @@ curl -s $SANDBOX_URL/v1/systemone \
 }
 ```
 
-Interactive docs are served at `/docs`, and the OpenAPI schema is at `/openapi.json`.
+Interactive docs are at [https://decision-sandbox.gutan.dev/docs](https://decision-sandbox.gutan.dev/docs), and the OpenAPI schema is at [https://decision-sandbox.gutan.dev/openapi.json](https://decision-sandbox.gutan.dev/openapi.json).
 
 ## Compatibility
 
@@ -90,7 +92,10 @@ Same request + same seed = same response
 ```
 
 ```sh
-curl -s "$SANDBOX_URL/v1/systemone" -H 'X-Sandbox-Seed: ci-42' -H 'Content-Type: application/json' -d @request.json
+curl -s https://decision-sandbox.gutan.dev/v1/systemone \
+  -H 'X-Sandbox-Seed: ci-42' \
+  -H 'Content-Type: application/json' \
+  -d @request.json
 ```
 
 Details:
@@ -132,21 +137,26 @@ Answer-shaping scenarios combine with seeds. For example, `scenario=low-confiden
 import httpx
 
 client = httpx.Client(
-    base_url="https://<your-sandbox-host>",  # was https://api.typesafe.ai
+    base_url="https://decision-sandbox.gutan.dev",  # was https://api.typesafe.ai
     headers={"X-Sandbox-Seed": "test-suite"},  # optional: reproducible answers
 )
-res = client.post("/v1/systemone", json={
-    "model": "jev-latest",
-    "state": "I was charged twice.",
-    "questions": {"billing": {"type": "noul", "instructions": "Is this about billing?"}},
-})
+res = client.post(
+    "/v1/systemone",
+    json={
+        "model": "jev-latest",
+        "state": "I was charged twice.",
+        "questions": {
+            "billing": {"type": "noul", "instructions": "Is this about billing?"}
+        },
+    },
+)
 print(res.json()["answers"]["billing"]["noul"])
 ```
 
 **JavaScript (fetch)**
 
 ```js
-const res = await fetch(`${SANDBOX_URL}/v1/systemone?scenario=always-true`, {
+const res = await fetch("https://decision-sandbox.gutan.dev/v1/systemone?scenario=always-true", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   body: JSON.stringify({
@@ -213,6 +223,7 @@ Requirements: [uv](https://docs.astral.sh/uv/) ≥ 0.12.3, [Node.js](https://nod
 task sync     # uv sync && uv run pywrangler sync
 task test     # run the contract tests
 task dev      # http://localhost:8787
+task bench    # latency of dev and prod (bench:dev starts a dev server if none is running)
 task deploy   # deploy to Cloudflare (run `uv run pywrangler login` the first time)
 ```
 
