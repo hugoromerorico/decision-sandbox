@@ -50,6 +50,10 @@ tasks:
     desc: Benchmark the public instance (16 requests, under the rate limit)
     cmd: uv run python bench/latency.py https://decision-sandbox.gutan.dev
 
+  secrets:
+    desc: Upload secrets from .dev.vars to Cloudflare (re-run after editing)
+    cmd: uv run pywrangler secret bulk .dev.vars
+
   deploy:
     desc: Deploy to Cloudflare Workers
     cmd: uv run pywrangler deploy

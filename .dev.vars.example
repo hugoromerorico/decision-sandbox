@@ -1,0 +1,5 @@
+# Copy to .dev.vars (local dev, git-ignored). Upload with: task secrets
+# Comma-separated API keys, one per traffic source. github-2026 is built in.
+SANDBOX_API_KEYS=github-2026,linkedin-2026,community-2026
+# Bearer token for GET /sandbox/stats. Generate with: openssl rand -hex 24
+SANDBOX_ADMIN_TOKEN=change-me

@@ -239,10 +239,7 @@ Rate limits are enforced by the `ratelimits` bindings in `wrangler.jsonc`. Keep 
 
 API keys: `github-2026` is built in. Add more with the `SANDBOX_API_KEYS` secret (comma-separated, e.g. `linkedin-2026,community-2026`). Set `SANDBOX_ADMIN_TOKEN` to enable `GET /sandbox/stats` (send it as a Bearer token) for per-key counts; without it the endpoint returns 404.
 
-```sh
-uv run pywrangler secret put SANDBOX_API_KEYS
-uv run pywrangler secret put SANDBOX_ADMIN_TOKEN
-```
+Keep them in `.dev.vars` (git-ignored; copy `.dev.vars.example`). `task dev` reads it locally, and `task secrets` uploads it to Cloudflare. List every key in `SANDBOX_API_KEYS` each time you upload.
 
 To refresh the vendored spec and check that the sandbox is still compatible:
 
