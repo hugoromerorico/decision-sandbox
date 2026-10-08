@@ -13,10 +13,11 @@ Use random answers for demos, seeded answers for reproducible tests and scenario
 
 ## Quick start
 
-Change your base URL from `https://api.typesafe.ai` to `https://decision-sandbox.gutan.dev`. An API key is optional, and any key is accepted.
+Change your base URL from `https://api.typesafe.ai` to `https://decision-sandbox.gutan.dev`. An API key is required, as with TypeSafe. **The free key is `github-2026`.** Other keys are issued per channel so traffic sources can be told apart.
 
 ```sh
 curl -s https://decision-sandbox.gutan.dev/v1/systemone \
+  -H 'Authorization: Bearer github-2026' \
   -H 'Content-Type: application/json' \
   -d '{
     "model": "jev-latest",
@@ -54,7 +55,7 @@ Interactive docs are at [https://decision-sandbox.gutan.dev/docs](https://decisi
 | `GET /v1/models` | ✅ | ✅ Lists `decision-sandbox-v1` and the `jev-latest` alias |
 | Question types `noul`, `choice`, `score` | ✅ | ✅ |
 | `422` validation errors | ✅ | ✅ Same `HTTPValidationError` shape |
-| `Authorization: Bearer <key>` | Required | Optional |
+| `Authorization: Bearer <key>` | Required | Required (allowlisted keys; free key `github-2026`) |
 | `model` | Must be a listed model | Any string is accepted |
 | Answers | Model output | **Synthetic** |
 | `usage` | Billed tokens | A deterministic estimate (about 4 characters per token). Nothing is billed. |
@@ -93,6 +94,7 @@ Same request + same seed = same response
 
 ```sh
 curl -s https://decision-sandbox.gutan.dev/v1/systemone \
+  -H 'Authorization: Bearer github-2026' \
   -H 'X-Sandbox-Seed: ci-42' \
   -H 'Content-Type: application/json' \
   -d @request.json
@@ -138,7 +140,10 @@ import httpx
 
 client = httpx.Client(
     base_url="https://decision-sandbox.gutan.dev",  # was https://api.typesafe.ai
-    headers={"X-Sandbox-Seed": "test-suite"},  # optional: reproducible answers
+    headers={
+        "Authorization": "Bearer github-2026",
+        "X-Sandbox-Seed": "test-suite",  # optional: reproducible answers
+    },
 )
 res = client.post(
     "/v1/systemone",
@@ -158,7 +163,7 @@ print(res.json()["answers"]["billing"]["noul"])
 ```js
 const res = await fetch("https://decision-sandbox.gutan.dev/v1/systemone?scenario=always-true", {
   method: "POST",
-  headers: { "Content-Type": "application/json" },
+  headers: { "Content-Type": "application/json", Authorization: "Bearer github-2026" },
   body: JSON.stringify({
     model: "jev-latest",
     state: "I was charged twice.",
@@ -175,6 +180,7 @@ CORS is open, so you can call the sandbox directly from browser code.
 | Status | When | Body |
 |---|---|---|
 | `400` | Unknown scenario or invalid seed | `{"detail": "..."}` |
+| `401` | Missing or unknown API key | `{"detail": "Not authenticated"}` with `WWW-Authenticate: Bearer` |
 | `413` | Body larger than 64 KiB | `{"detail": "..."}` |
 | `422` | Request violates the schema or a sandbox limit | `{"detail": [{"loc", "msg", "type", ...}]}` |
 | `429` | Rate limit exceeded | `{"detail": "..."}` with `Retry-After` |
@@ -195,7 +201,7 @@ The sandbox is a free shared service, so every request is bounded.
 | Requests per IP | 60 per minute |
 | Requests per API key | 300 per minute (the per-IP limit also applies) |
 
-Request bodies are never stored. API keys are used only as a hashed rate-limit key, and they are not validated, stored or logged.
+Request bodies are never stored. API keys are checked against an allowlist. The service keeps per-key request counts in memory only (no database) and logs the key label and endpoint of each request. Keys identify a traffic source, not a person. Counts are per Worker instance and reset on restart or deploy, so they are approximate.
 
 ## Development
 
@@ -230,6 +236,13 @@ task deploy   # deploy to Cloudflare (run `uv run pywrangler login` the first ti
 The Workers runtime uses **Python 3.14**, selected by `compatibility_date` in `wrangler.jsonc` (any date on or after `2026-09-08`). `.python-version` and `requires-python` are pinned to match.
 
 Rate limits are enforced by the `ratelimits` bindings in `wrangler.jsonc`. Keep them in sync with [src/sandbox/limits.py](src/sandbox/limits.py). When the bindings are absent, as in unit tests, an in-memory limiter takes over.
+
+API keys: `github-2026` is built in. Add more with the `SANDBOX_API_KEYS` secret (comma-separated, e.g. `linkedin-2026,community-2026`). Set `SANDBOX_ADMIN_TOKEN` to enable `GET /sandbox/stats` (send it as a Bearer token) for per-key counts; without it the endpoint returns 404.
+
+```sh
+uv run pywrangler secret put SANDBOX_API_KEYS
+uv run pywrangler secret put SANDBOX_ADMIN_TOKEN
+```
 
 To refresh the vendored spec and check that the sandbox is still compatible:
 

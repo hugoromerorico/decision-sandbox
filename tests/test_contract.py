@@ -52,7 +52,7 @@ REQUEST = {
 @pytest.fixture
 def client():
     local_limiter.reset()
-    return TestClient(app)
+    return TestClient(app, headers={"Authorization": "Bearer github-2026"})
 
 
 def post(client, body=REQUEST, **kwargs):
@@ -64,17 +64,13 @@ def test_request_example_is_valid_typesafe_request():
 
 
 def test_response_matches_typesafe_schema(client):
-    res = post(client, headers={"Authorization": "Bearer anything"})
+    res = post(client)
     assert res.status_code == 200
     RESPONSE.validate(res.json())
     assert list(res.json()["answers"]) == list(REQUEST["questions"])
     assert res.headers["x-sandbox-synthetic"] == "true"
     assert res.headers["x-request-id"].startswith("req_")
     assert res.json()["model"] == "decision-sandbox-v1"
-
-
-def test_no_credentials_required(client):
-    assert post(client).status_code == 200
 
 
 @pytest.mark.parametrize("scenario", ["random", "high-confidence", "low-confidence", "always-true", "always-false",

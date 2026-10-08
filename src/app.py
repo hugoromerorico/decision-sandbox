@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from sandbox import SANDBOX_MODEL, SANDBOX_VERSION
+from sandbox.auth import metrics, require_admin, require_api_key
 from sandbox.generator import generate, new_seed
 from sandbox.limits import MAX_DELAY_MS, MAX_SEED_LENGTH, TIMEOUT_SCENARIO_MS
 from sandbox.middleware import SandboxMiddleware
@@ -24,7 +25,7 @@ model. Probabilities are not calibrated predictions. Do not use them for real
 decisions. This project is independent and not affiliated with TypeSafe.
 
 Point your integration at this base URL instead of `https://api.typesafe.ai`.
-An API key is optional.
+An API key is required: use the free key `github-2026` (`Authorization: Bearer github-2026`).
 
 Control the answers with headers (or query parameters):
 
@@ -53,7 +54,8 @@ app.add_middleware(
     expose_headers=["X-Request-Id", "X-Sandbox-Synthetic", "X-Sandbox-Model", "X-Sandbox-Seed", "X-Sandbox-Scenario", "Retry-After"],
 )
 
-# Declares the same security scheme as TypeSafe, but a key is optional here.
+# Declares the same security scheme as TypeSafe. Keys are checked by require_api_key,
+# so auto_error stays off to control the 401 body.
 bearer = HTTPBearer(auto_error=False)
 OptionalAuth = Annotated[HTTPAuthorizationCredentials | None, Depends(bearer)]
 
@@ -101,10 +103,15 @@ def scenarios():
     return {"scenarios": catalogue()}
 
 
+@app.get("/sandbox/stats", include_in_schema=False, dependencies=[Depends(require_admin)])
+def stats():
+    return metrics.snapshot()
+
+
 @app.get(
     "/v1/models",
     response_model=ModelMetadataList,
-    dependencies=[Depends(enforce_rate_limits)],
+    dependencies=[Depends(require_api_key), Depends(enforce_rate_limits)],
     tags=["typesafe-compatible"],
     summary="Models V1",
 )
@@ -119,7 +126,7 @@ def models_v1(_auth: OptionalAuth):
 @app.post(
     "/v1/systemone",
     response_model=SystemOneResponse,
-    dependencies=[Depends(enforce_rate_limits)],
+    dependencies=[Depends(require_api_key), Depends(enforce_rate_limits)],
     tags=["typesafe-compatible"],
     summary="Systemone",
     responses={
