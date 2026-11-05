@@ -9,10 +9,12 @@ POST minus /health approximates the app's own cost. Prod minus dev approximates
 network and platform overhead.
 
 Usage: python bench/latency.py https://decision-sandbox.gutan.dev
+The API key defaults to the free public key; override it with SANDBOX_API_KEY.
 """
 
 import http.client
 import json
+import os
 import statistics
 import sys
 import time
@@ -28,7 +30,12 @@ BODY = json.dumps({
         "billing": {"type": "noul", "instructions": "Is this message about billing?"},
     },
 }).encode()
-HEADERS = {"Content-Type": "application/json", "Connection": "keep-alive"}
+API_KEY = os.environ.get("SANDBOX_API_KEY", "github-2026")
+HEADERS = {
+    "Authorization": f"Bearer {API_KEY}",
+    "Content-Type": "application/json",
+    "Connection": "keep-alive",
+}
 
 
 def connect(url: str) -> tuple[http.client.HTTPConnection, float]:
