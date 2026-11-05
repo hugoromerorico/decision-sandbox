@@ -1,0 +1,20 @@
+[package]
+name = "decision-sandbox-rs"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+worker = "0.8"
+worker-macros = "0.8"
+serde_json = "1"
+
+# A smaller .wasm binary loads faster on a cold start. No `strip = true`:
+# wasm-bindgen needs the target_features section, and worker-build runs wasm-opt anyway.
+[profile.release]
+opt-level = "s"
+lto = true
+codegen-units = 1
