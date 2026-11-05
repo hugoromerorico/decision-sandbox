@@ -73,3 +73,19 @@ tasks:
     requires:
       vars: [URL]
     cmd: uv run python bench/latency.py {{.URL}}
+
+  ts:dev:
+    desc: Run the TypeScript cold-start POC locally
+    dir: ts-poc
+    cmd: npx wrangler dev --port 8789
+
+  ts:deploy:
+    desc: Deploy the TypeScript cold-start POC as a separate Worker on workers.dev
+    dir: ts-poc
+    cmd: npx wrangler deploy
+
+  bench:ts:
+    desc: Benchmark a deployed TypeScript POC, e.g. task bench:ts URL=https://decision-sandbox-ts.<subdomain>.workers.dev
+    requires:
+      vars: [URL]
+    cmd: uv run python bench/latency.py {{.URL}}
