@@ -57,3 +57,19 @@ tasks:
   deploy:
     desc: Deploy to Cloudflare Workers
     cmd: uv run pywrangler deploy
+
+  rust:dev:
+    desc: Run the Rust cold-start POC locally (needs rustup + wasm32-unknown-unknown)
+    dir: rust-poc
+    cmd: npx wrangler dev --port 8788
+
+  rust:deploy:
+    desc: Deploy the Rust cold-start POC as a separate Worker on workers.dev
+    dir: rust-poc
+    cmd: npx wrangler deploy
+
+  bench:rust:
+    desc: Benchmark a deployed Rust POC, e.g. task bench:rust URL=https://decision-sandbox-rs.<subdomain>.workers.dev
+    requires:
+      vars: [URL]
+    cmd: uv run python bench/latency.py {{.URL}}
