@@ -1,0 +1,11 @@
+{
+    "$schema": "node_modules/wrangler/config-schema.json",
+    // Separate Worker from the Python and Rust ones: deploys to decision-sandbox-ts.<subdomain>.workers.dev.
+    "name": "decision-sandbox-ts",
+    // Wrangler bundles TypeScript with esbuild; no build step needed.
+    "main": "src/index.ts",
+    "compatibility_date": "2026-10-03",
+    "observability": {
+        "enabled": true
+    }
+}
