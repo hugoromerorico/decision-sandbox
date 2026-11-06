@@ -58,34 +58,92 @@ tasks:
     desc: Deploy to Cloudflare Workers
     cmd: uv run pywrangler deploy
 
+  shared:
+    desc: Export the OpenAPI spec and docs pages the TypeScript and Rust ports serve
+    cmd: uv run python scripts/export_shared.py
+
   rust:dev:
-    desc: Run the Rust cold-start POC locally (needs rustup + wasm32-unknown-unknown)
+    desc: Run the Rust port locally (needs rustup + wasm32-unknown-unknown)
     dir: rust-poc
-    cmd: npx wrangler dev --port 8788
+    cmd: npx wrangler dev --port 8788 --env-file ../.dev.vars
 
   rust:deploy:
-    desc: Deploy the Rust cold-start POC as a separate Worker on workers.dev
+    desc: Deploy the Rust port as a separate Worker on workers.dev (task secrets:rust first)
     dir: rust-poc
     cmd: npx wrangler deploy
 
-  bench:rust:
-    desc: Benchmark a deployed Rust POC, e.g. task bench:rust URL=https://decision-sandbox-rs.<subdomain>.workers.dev
-    requires:
-      vars: [URL]
-    cmd: uv run python bench/latency.py {{.URL}}
+  ts:install:
+    desc: Install the TypeScript port's toolchain (wrangler, tsc)
+    dir: ts-poc
+    cmd: npm install
 
   ts:dev:
-    desc: Run the TypeScript cold-start POC locally
+    desc: Run the TypeScript port locally
     dir: ts-poc
-    cmd: npx wrangler dev --port 8789
+    cmd: npx wrangler dev --port 8789 --env-file ../.dev.vars
+
+  ts:check:
+    desc: Typecheck the TypeScript port
+    dir: ts-poc
+    cmd: npx tsc --noEmit
 
   ts:deploy:
-    desc: Deploy the TypeScript cold-start POC as a separate Worker on workers.dev
+    desc: Deploy the TypeScript port as a separate Worker on workers.dev (task secrets:ts first)
     dir: ts-poc
     cmd: npx wrangler deploy
 
-  bench:ts:
-    desc: Benchmark a deployed TypeScript POC, e.g. task bench:ts URL=https://decision-sandbox-ts.<subdomain>.workers.dev
+  secrets:ts:
+    desc: Upload secrets from .dev.vars to the TypeScript Worker
+    dir: ts-poc
+    cmd: npx wrangler secret bulk ../.dev.vars
+
+  secrets:rust:
+    desc: Upload secrets from .dev.vars to the Rust Worker
+    dir: rust-poc
+    cmd: npx wrangler secret bulk ../.dev.vars
+
+  bench:rust:
+    desc: Benchmark a deployed Rust port, e.g. task bench:rust URL=https://decision-sandbox-rs.<subdomain>.workers.dev
     requires:
       vars: [URL]
     cmd: uv run python bench/latency.py {{.URL}}
+
+  bench:ts:
+    desc: Benchmark a deployed TypeScript port, e.g. task bench:ts URL=https://decision-sandbox-ts.<subdomain>.workers.dev
+    requires:
+      vars: [URL]
+    cmd: uv run python bench/latency.py {{.URL}}
+
+  bench:all:
+    desc: Benchmark the deployed Python, Rust and TypeScript Workers back to back and append a row each to bench/results.csv (note with NOTE="30 min idle")
+    vars:
+      NOTE: '{{.NOTE | default ""}}'
+    env:
+      BENCH_NOTE: '{{.NOTE}}'
+    cmds:
+      - uv run python bench/latency.py https://decision-sandbox.gutan.dev
+      - uv run python bench/latency.py https://decision-sandbox-rs.2romerohugo.workers.dev
+      - uv run python bench/latency.py https://decision-sandbox-ts.2romerohugo.workers.dev
+
+  parity:
+    desc: Start the Python, Rust and TypeScript Workers locally and check they answer identically
+    vars:
+      # Must match KEYS and ADMIN_TOKEN in tests/test_parity.py.
+      VARS: --var SANDBOX_API_KEYS:parity-0,parity-1,parity-2,parity-3,parity-4,parity-5,parity-6,parity-7,parity-8,parity-9,parity-10,parity-11,parity-12,parity-13,parity-14,parity-15,parity-16,parity-17,parity-18,parity-19,parity-20,parity-21,parity-22,parity-23,parity-24,parity-25,parity-26,parity-27,parity-28,parity-29,parity-30,parity-31 --var SANDBOX_ADMIN_TOKEN:parity-admin
+    cmd: |
+      mkdir -p .wrangler
+      wait_for() { for i in $(seq 180); do curl -sf localhost:$1/health > /dev/null && return; sleep 1; done; echo "port $1 did not start"; exit 1; }
+      # One at a time, each with its own inspector port: concurrent starts collide.
+      uv run pywrangler dev --port 8797 --inspector-port 9297 {{.VARS}} > .wrangler/parity-py.log 2>&1 &
+      wait_for 8797
+      (cd rust-poc && npx wrangler dev --port 8798 --inspector-port 9298 {{.VARS}} > ../.wrangler/parity-rs.log 2>&1 &)
+      wait_for 8798
+      (cd ts-poc && npx wrangler dev --port 8799 --inspector-port 9299 {{.VARS}} > ../.wrangler/parity-ts.log 2>&1 &)
+      wait_for 8799
+      status=0
+      PARITY_URLS=http://localhost:8797,http://localhost:8798,http://localhost:8799 uv run pytest tests/test_parity.py {{.CLI_ARGS}} || status=$?
+      for port in 8798 8799; do
+        SANDBOX_URL=http://localhost:$port SANDBOX_KEYS=parity-24,parity-25,parity-26,parity-27,parity-28,parity-29,parity-30,parity-31 uv run pytest tests/test_contract.py -q {{.CLI_ARGS}} || status=$?
+      done
+      pkill -TERM -f "dev --port 879[789]"
+      exit $status
