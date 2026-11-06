@@ -1,8 +1,20 @@
-"""Contract tests: every response must validate against TypeSafe's published OpenAPI spec."""
+"""Contract tests: every response must validate against TypeSafe's published OpenAPI spec.
 
+By default they run in-process against the Python app. Set SANDBOX_URL to run them against
+a running Worker instead, e.g. a local TypeScript or Rust port (task parity does this):
+
+    SANDBOX_URL=http://localhost:8789 SANDBOX_KEYS=k1,k2 uv run pytest tests/test_contract.py
+
+SANDBOX_KEYS lists allowlisted keys to rotate through, so the per-key rate limit is not
+hit. Each test uses its own CF-Connecting-IP, which `wrangler dev` honours.
+"""
+
+import itertools
 import json
+import os
 from pathlib import Path
 
+import httpx2 as httpx
 import pytest
 from fastapi.testclient import TestClient
 from jsonschema import Draft202012Validator
@@ -49,10 +61,21 @@ REQUEST = {
 }
 
 
+SANDBOX_URL = os.environ.get("SANDBOX_URL")
+_keys = itertools.cycle(os.environ.get("SANDBOX_KEYS", "github-2026").split(","))
+_ips = itertools.count(1)
+
+
 @pytest.fixture
 def client():
+    if SANDBOX_URL:
+        n = next(_ips)
+        headers = {"Authorization": f"Bearer {next(_keys)}", "CF-Connecting-IP": f"10.200.{n >> 8 & 255}.{n & 255}"}
+        with httpx.Client(base_url=SANDBOX_URL, headers=headers, timeout=30) as remote:
+            yield remote
+        return
     local_limiter.reset()
-    return TestClient(app, headers={"Authorization": "Bearer github-2026"})
+    yield TestClient(app, headers={"Authorization": "Bearer github-2026"})
 
 
 def post(client, body=REQUEST, **kwargs):
