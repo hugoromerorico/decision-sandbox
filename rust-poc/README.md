@@ -1,13 +1,14 @@
-# Rust cold-start POC
+# Rust port
 
-A minimal Rust Worker ([workers-rs](https://github.com/cloudflare/workers-rs)) for comparing cold start with the Python Worker. It is **not** a port of the sandbox.
+A full Rust port of the Python Worker ([src/](../src/)), built with [workers-rs](https://github.com/cloudflare/workers-rs). It serves the same routes and returns the same status codes, headers and bodies. **For a given seed, the answers are byte-identical to the Python Worker's**, which `task parity` checks against all three implementations.
 
-It serves the routes [bench/latency.py](../bench/latency.py) calls:
+It mirrors the [TypeScript port](../ts-poc/README.md) module for module. See that README for what byte-for-byte parity with CPython, FastAPI and pydantic involves. The modules:
 
-- `GET /health`
-- `POST /v1/systemone`, which requires `Authorization: Bearer github-2026`, parses the JSON body and returns a fixed `noul` answer per question
-
-There is no generator, no seeds and no rate limiting. The goal is to measure how long the runtime takes to boot. This is where Python Workers are slow (Pyodide plus FastAPI imports, about 1.3 s cold), and where a Rust→WASM Worker should take a few milliseconds.
+- [src/pyrandom.rs](src/pyrandom.rs): CPython's Mersenne Twister and distributions, Neumaier `sum()`, `round()`
+- [src/json.rs](src/json.rs): a JSON decoder and encoders with Python semantics (no serde_json)
+- [src/schemas.rs](src/schemas.rs): pydantic-identical validation errors
+- [src/generator.rs](src/generator.rs), [src/scenarios.rs](src/scenarios.rs), [src/auth.rs](src/auth.rs): the sandbox logic
+- [src/lib.rs](src/lib.rs): routing and the middleware stack
 
 ## Setup (one-time)
 
@@ -19,17 +20,26 @@ rustup target add wasm32-unknown-unknown
 
 The first build installs `worker-build` through the build command in `wrangler.jsonc`, using `~/.cargo/bin`, so that directory must be on `PATH` too.
 
-## Run, deploy, benchmark
+## Run, test, deploy
 
 ```sh
-task rust:dev                            # local, http://localhost:8788
-task rust:deploy                         # separate Worker: decision-sandbox-rs.<subdomain>.workers.dev
+task rust:dev                            # local, http://localhost:8788 (uses ../.dev.vars)
+task parity                              # Python vs Rust vs TypeScript, byte for byte
+task secrets:rust                        # upload SANDBOX_API_KEYS / SANDBOX_ADMIN_TOKEN
+task rust:deploy                         # decision-sandbox-rs.<subdomain>.workers.dev
 task bench:rust URL=https://decision-sandbox-rs.<subdomain>.workers.dev
 ```
+
+The Worker uses its own rate-limit namespaces (3001/3002).
 
 ## Measuring cold start fairly
 
 - Each run gives only **one** cold sample (the `first POST` line). Collect 3–5 per Worker. A fresh deploy, or 10+ minutes idle, usually makes the next request cold.
 - Cloudflare starts warming a Worker during the TLS handshake, so compare `connect + first POST`, not `first POST` alone.
-- Benchmark the Python Worker the same way and at the same time (`task bench:prod`).
+- Benchmark the three Workers the same way and at the same time.
 - Local numbers (`wrangler dev`) say nothing about cold start. Use the deployed Worker.
+
+## Known differences
+
+- JSON nested more than 512 levels deep is rejected with a 400. Python's limit depends on the runtime's stack.
+- In the "unknown scenario" message, Python's `repr()` escapes non-printable characters using full Unicode tables. This port covers controls, format characters, separators, surrogates and private use, but treats unassigned code points as printable.

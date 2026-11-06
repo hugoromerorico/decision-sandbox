@@ -10,7 +10,9 @@ crate-type = ["cdylib"]
 [dependencies]
 worker = "0.8"
 worker-macros = "0.8"
-serde_json = "1"
+sha2 = "0.10"
+# crypto.getRandomValues for seeds and request IDs, like Python's secrets module.
+getrandom = { version = "0.2", features = ["js"] }
 
 # A smaller .wasm binary loads faster on a cold start. No `strip = true`:
 # wasm-bindgen needs the target_features section, and worker-build runs wasm-opt anyway.
