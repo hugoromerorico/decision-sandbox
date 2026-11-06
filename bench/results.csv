@@ -1,0 +1,13 @@
+recorded_at,language,url,connect_ms,first_post_ms,connect_plus_first_ms,post_median_ms,post_min_ms,post_max_ms,health_median_ms,app_ms,note
+2026-11-05T10:10:40Z,python,https://decision-sandbox.gutan.dev,43.1,1282.0,1325.1,50.4,32.2,76.5,24.5,26.0,backfilled from session transcript
+2026-11-05T10:27:30Z,rust,https://decision-sandbox-rs.2romerohugo.workers.dev,64.8,42.9,107.7,29.1,15.6,38.0,16.9,12.3,backfilled from session transcript; first run after deploy
+2026-11-05T10:27:30Z,python,https://decision-sandbox.gutan.dev,49.6,66.3,115.9,37.3,23.9,44.1,19.8,17.5,backfilled from session transcript; WARM (17 min after previous run) - not a cold sample
+2026-11-05T15:38:51Z,typescript,https://decision-sandbox-ts.2romerohugo.workers.dev,70.0,46.2,116.2,32.0,16.5,45.8,20.0,12.0,backfilled from session transcript; first run after deploy
+2026-11-05T15:38:51Z,rust,https://decision-sandbox-rs.2romerohugo.workers.dev,58.0,44.4,102.4,31.9,16.4,39.0,17.3,14.5,backfilled from session transcript
+2026-11-05T15:38:51Z,python,https://decision-sandbox.gutan.dev,80.7,1284.3,1365.0,54.0,38.1,74.2,32.3,21.7,backfilled from session transcript
+2026-11-05T16:04:43Z,typescript,https://decision-sandbox-ts.2romerohugo.workers.dev,61.0,36.2,97.2,24.8,16.0,41.9,19.2,5.5,backfilled from session transcript; 26 min idle
+2026-11-05T16:04:43Z,rust,https://decision-sandbox-rs.2romerohugo.workers.dev,52.4,33.7,86.1,29.4,16.1,34.9,32.4,-3.0,backfilled from session transcript; 26 min idle
+2026-11-05T16:04:43Z,python,https://decision-sandbox.gutan.dev,55.2,1172.3,1227.5,41.2,32.2,84.5,27.6,13.5,backfilled from session transcript; 26 min idle
+2026-11-06T10:07:32Z,python,https://decision-sandbox.gutan.dev,82.9,961.4,1044.2,34.4,23.8,49.3,26.2,8.1,~18h idle since previous run
+2026-11-06T10:07:32Z,rust,https://decision-sandbox-rs.2romerohugo.workers.dev,65.6,49.7,115.3,31.3,14.9,53.0,16.1,15.2,~18h idle since previous run
+2026-11-06T10:07:33Z,typescript,https://decision-sandbox-ts.2romerohugo.workers.dev,55.8,36.6,92.4,35.3,15.3,48.2,15.9,19.4,~18h idle since previous run

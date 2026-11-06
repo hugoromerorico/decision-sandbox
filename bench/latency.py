@@ -8,16 +8,22 @@ Sends 16 requests in total, well under the 60/min per-IP limit:
 POST minus /health approximates the app's own cost. Prod minus dev approximates
 network and platform overhead.
 
+Runs against deployed (https) targets are appended to bench/results.csv, so every
+cold sample ends up in one place. Set BENCH_NOTE to annotate the row.
+
 Usage: python bench/latency.py https://decision-sandbox.gutan.dev
 The API key defaults to the free public key; override it with SANDBOX_API_KEY.
 """
 
+import csv
 import http.client
 import json
 import os
 import statistics
 import sys
 import time
+from datetime import datetime, timezone
+from pathlib import Path
 from urllib.parse import urlsplit
 
 POSTS = 10
@@ -31,6 +37,15 @@ BODY = json.dumps({
     },
 }).encode()
 API_KEY = os.environ.get("SANDBOX_API_KEY", "github-2026")
+RESULTS = Path(__file__).with_name("results.csv")
+FIELDS = ["recorded_at", "language", "url", "connect_ms", "first_post_ms", "connect_plus_first_ms",
+          "post_median_ms", "post_min_ms", "post_max_ms", "health_median_ms", "app_ms", "note"]
+LANGUAGES = {
+    "decision-sandbox.gutan.dev": "python",
+    "decision-sandbox.2romerohugo.workers.dev": "python",
+    "decision-sandbox-rs.2romerohugo.workers.dev": "rust",
+    "decision-sandbox-ts.2romerohugo.workers.dev": "typescript",
+}
 HEADERS = {
     "Authorization": f"Bearer {API_KEY}",
     "Content-Type": "application/json",
@@ -63,6 +78,29 @@ def summary(label: str, samples: list[float]) -> str:
             f"  mean {statistics.mean(samples):7.1f}  max {max(samples):7.1f} ms")
 
 
+def record(url: str, connect_ms: float, cold_ms: float, posts: list[float], health: list[float]) -> None:
+    new = not RESULTS.exists()
+    with RESULTS.open("a", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=FIELDS)
+        if new:
+            writer.writeheader()
+        writer.writerow({
+            "recorded_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "language": LANGUAGES.get(urlsplit(url).hostname or "", "unknown"),
+            "url": url,
+            "connect_ms": f"{connect_ms:.1f}",
+            "first_post_ms": f"{cold_ms:.1f}",
+            "connect_plus_first_ms": f"{connect_ms + cold_ms:.1f}",
+            "post_median_ms": f"{statistics.median(posts):.1f}",
+            "post_min_ms": f"{min(posts):.1f}",
+            "post_max_ms": f"{max(posts):.1f}",
+            "health_median_ms": f"{statistics.median(health):.1f}",
+            "app_ms": f"{statistics.median(posts) - statistics.median(health):.1f}",
+            "note": os.environ.get("BENCH_NOTE", ""),
+        })
+    print(f"Recorded in {RESULTS}")
+
+
 def main() -> None:
     if len(sys.argv) != 2:
         sys.exit(__doc__)
@@ -87,6 +125,8 @@ def main() -> None:
     print(summary("GET /health", health))
     app_ms = statistics.median(posts) - statistics.median(health)
     print(f"{'app cost (median diff)':<22} {app_ms:7.1f} ms")
+    if url.startswith("https://"):
+        record(url, connect_ms, cold_ms, posts, health)
 
 
 if __name__ == "__main__":
